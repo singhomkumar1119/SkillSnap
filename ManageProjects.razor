@@ -1,0 +1,104 @@
+@page "/manage/projects"
+@attribute [Authorize]
+@inject ApiClientService Api
+
+<h1>Manage Projects</h1>
+
+<EditForm Model="_draft" OnValidSubmit="SaveProject" class="card">
+    <DataAnnotationsValidator />
+
+    <label>Title</label>
+    <InputText @bind-Value="_draft.Title" />
+    <ValidationMessage For="@(() => _draft.Title)" class="error" />
+
+    <label>Description</label>
+    <InputTextArea @bind-Value="_draft.Description" />
+    <ValidationMessage For="@(() => _draft.Description)" class="error" />
+
+    <label>Tech stack</label>
+    <InputText @bind-Value="_draft.TechStack" />
+    <ValidationMessage For="@(() => _draft.TechStack)" class="error" />
+
+    <label>Project URL (optional)</label>
+    <InputText @bind-Value="_draft.ProjectUrl" />
+    <ValidationMessage For="@(() => _draft.ProjectUrl)" class="error" />
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="error">@_error</p>
+    }
+
+    <button type="submit">@(_draft.Id == 0 ? "Add project" : "Save changes")</button>
+    @if (_draft.Id != 0)
+    {
+        <button type="button" class="secondary" @onclick="ResetForm">Cancel edit</button>
+    }
+</EditForm>
+
+@if (_loading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    @foreach (var project in _projects)
+    {
+        <div class="card">
+            <h3>@project.Title</h3>
+            <p>@project.Description</p>
+            <p><em>@project.TechStack</em></p>
+            <button @onclick="() => Edit(project)">Edit</button>
+            <button class="secondary" @onclick="() => Delete(project.Id)">Delete</button>
+        </div>
+    }
+}
+
+@code {
+    private List<ProjectDto> _projects = new();
+    private ProjectDto _draft = new();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() => await LoadProjects();
+
+    private async Task LoadProjects()
+    {
+        _loading = true;
+        _projects = await Api.GetProjectsAsync();
+        _loading = false;
+    }
+
+    private async Task SaveProject()
+    {
+        _error = null;
+        var response = _draft.Id == 0
+            ? await Api.CreateProjectAsync(_draft)
+            : await Api.UpdateProjectAsync(_draft.Id, _draft);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _error = "Could not save project. Please check the fields above.";
+            return;
+        }
+
+        ResetForm();
+        await LoadProjects();
+    }
+
+    private void Edit(ProjectDto project) => _draft = new ProjectDto
+    {
+        Id = project.Id,
+        Title = project.Title,
+        Description = project.Description,
+        TechStack = project.TechStack,
+        ProjectUrl = project.ProjectUrl,
+    };
+
+    private async Task Delete(int id)
+    {
+        await Api.DeleteProjectAsync(id);
+        await LoadProjects();
+    }
+
+    private void ResetForm() => _draft = new ProjectDto();
+}

@@ -1,0 +1,69 @@
+@page "/"
+@inject ApiClientService Api
+
+<h1>@(_profile?.Name ?? "SkillSnap Portfolio")</h1>
+
+@if (_loading)
+{
+    <p>Loading portfolio...</p>
+}
+else
+{
+    @if (_profile is not null)
+    {
+        <div class="card">
+            @if (!string.IsNullOrWhiteSpace(_profile.PhotoUrl))
+            {
+                <img src="@_profile.PhotoUrl" alt="@_profile.Name" width="96" style="border-radius: 50%;" />
+            }
+            <p>@_profile.Bio</p>
+        </div>
+    }
+
+    <h2>Projects</h2>
+    @foreach (var project in _projects)
+    {
+        <div class="card">
+            <h3>@project.Title</h3>
+            <p>@project.Description</p>
+            <p><em>@project.TechStack</em></p>
+            @if (!string.IsNullOrWhiteSpace(project.ProjectUrl))
+            {
+                <a href="@project.ProjectUrl" target="_blank">View project</a>
+            }
+        </div>
+    }
+
+    <h2>Skills</h2>
+    <div class="card">
+        <ul>
+            @foreach (var skill in _skills)
+            {
+                <li>@skill.Name — proficiency @skill.Proficiency/5</li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    private ProfileDto? _profile;
+    private List<ProjectDto> _projects = new();
+    private List<SkillDto> _skills = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fire all three requests in parallel instead of sequentially awaiting
+        // each one — noticeably faster first paint on a slower connection.
+        var profileTask = Api.GetProfileAsync();
+        var projectsTask = Api.GetProjectsAsync();
+        var skillsTask = Api.GetSkillsAsync();
+
+        await Task.WhenAll(profileTask, projectsTask, skillsTask);
+
+        _profile = await profileTask;
+        _projects = await projectsTask;
+        _skills = await skillsTask;
+        _loading = false;
+    }
+}

@@ -1,0 +1,24 @@
+@inject AuthStateService AuthState
+
+<nav>
+    <a href="/">Portfolio</a>
+    <AuthorizeView>
+        <Authorized>
+            <a href="/manage/projects">Manage Projects</a>
+            <a href="/manage/skills">Manage Skills</a>
+            <button class="secondary" @onclick="Logout">Log out</button>
+        </Authorized>
+        <NotAuthorized>
+            <a href="/login">Log in</a>
+            <a href="/register">Register</a>
+        </NotAuthorized>
+    </AuthorizeView>
+</nav>
+<hr />
+
+@code {
+    private async Task Logout()
+    {
+        await AuthState.LogoutAsync();
+    }
+}

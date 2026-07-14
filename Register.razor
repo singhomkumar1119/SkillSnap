@@ -1,0 +1,48 @@
+@page "/register"
+@inject AuthStateService AuthState
+@inject NavigationManager Nav
+
+<h1>Create an account</h1>
+
+<EditForm Model="_model" OnValidSubmit="HandleRegister" class="card">
+    <DataAnnotationsValidator />
+
+    <label>Email</label>
+    <InputText @bind-Value="_model.Email" />
+    <ValidationMessage For="@(() => _model.Email)" class="error" />
+
+    <label>Password (min 8 characters)</label>
+    <InputText type="password" @bind-Value="_model.Password" />
+    <ValidationMessage For="@(() => _model.Password)" class="error" />
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="error">@_error</p>
+    }
+
+    <button type="submit" disabled="@_busy">@(_busy ? "Creating account..." : "Register")</button>
+</EditForm>
+
+@code {
+    private RegisterDto _model = new();
+    private string? _error;
+    private bool _busy;
+
+    private async Task HandleRegister()
+    {
+        _busy = true;
+        _error = null;
+
+        var (success, error) = await AuthState.RegisterAsync(_model.Email, _model.Password);
+
+        _busy = false;
+        if (success)
+        {
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            _error = error;
+        }
+    }
+}

@@ -1,0 +1,48 @@
+@page "/login"
+@inject AuthStateService AuthState
+@inject NavigationManager Nav
+
+<h1>Log in</h1>
+
+<EditForm Model="_model" OnValidSubmit="HandleLogin" class="card">
+    <DataAnnotationsValidator />
+
+    <label>Email</label>
+    <InputText @bind-Value="_model.Email" />
+    <ValidationMessage For="@(() => _model.Email)" class="error" />
+
+    <label>Password</label>
+    <InputText type="password" @bind-Value="_model.Password" />
+    <ValidationMessage For="@(() => _model.Password)" class="error" />
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="error">@_error</p>
+    }
+
+    <button type="submit" disabled="@_busy">@(_busy ? "Logging in..." : "Log in")</button>
+</EditForm>
+
+@code {
+    private LoginDto _model = new();
+    private string? _error;
+    private bool _busy;
+
+    private async Task HandleLogin()
+    {
+        _busy = true;
+        _error = null;
+
+        var (success, error) = await AuthState.LoginAsync(_model.Email, _model.Password);
+
+        _busy = false;
+        if (success)
+        {
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            _error = error;
+        }
+    }
+}
