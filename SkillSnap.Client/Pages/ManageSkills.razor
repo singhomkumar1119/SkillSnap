@@ -1,0 +1,87 @@
+@page "/manage/skills"
+@attribute [Authorize]
+@inject ApiClientService Api
+
+<h1>Manage Skills</h1>
+
+<EditForm Model="_draft" OnValidSubmit="SaveSkill" class="card">
+    <DataAnnotationsValidator />
+
+    <label>Skill name</label>
+    <InputText @bind-Value="_draft.Name" />
+    <ValidationMessage For="@(() => _draft.Name)" class="error" />
+
+    <label>Proficiency (1-5)</label>
+    <InputNumber @bind-Value="_draft.Proficiency" />
+    <ValidationMessage For="@(() => _draft.Proficiency)" class="error" />
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="error">@_error</p>
+    }
+
+    <button type="submit">@(_draft.Id == 0 ? "Add skill" : "Save changes")</button>
+    @if (_draft.Id != 0)
+    {
+        <button type="button" class="secondary" @onclick="ResetForm">Cancel edit</button>
+    }
+</EditForm>
+
+@if (_loading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    @foreach (var skill in _skills)
+    {
+        <div class="card">
+            <strong>@skill.Name</strong> — @skill.Proficiency/5
+            <button @onclick="() => Edit(skill)">Edit</button>
+            <button class="secondary" @onclick="() => Delete(skill.Id)">Delete</button>
+        </div>
+    }
+}
+
+@code {
+    private List<SkillDto> _skills = new();
+    private SkillDto _draft = new();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() => await LoadSkills();
+
+    private async Task LoadSkills()
+    {
+        _loading = true;
+        _skills = await Api.GetSkillsAsync();
+        _loading = false;
+    }
+
+    private async Task SaveSkill()
+    {
+        _error = null;
+        var response = _draft.Id == 0
+            ? await Api.CreateSkillAsync(_draft)
+            : await Api.UpdateSkillAsync(_draft.Id, _draft);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _error = "Could not save skill. Please check the fields above.";
+            return;
+        }
+
+        ResetForm();
+        await LoadSkills();
+    }
+
+    private void Edit(SkillDto skill) => _draft = new SkillDto { Id = skill.Id, Name = skill.Name, Proficiency = skill.Proficiency };
+
+    private async Task Delete(int id)
+    {
+        await Api.DeleteSkillAsync(id);
+        await LoadSkills();
+    }
+
+    private void ResetForm() => _draft = new SkillDto();
+}
